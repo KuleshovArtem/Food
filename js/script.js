@@ -163,7 +163,6 @@ window.addEventListener('DOMContentLoaded', () => {
             this.changeToUAH();
         }
         changeToUAH () {
-            //this.price *= this.transfer;
             this.price = this.price * this.transfer;
         }
 
@@ -190,38 +189,43 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    //const div = new MenuCard();
-    //div.render();
-    // ниже алтернативный варинат еденичного использования
-    new MenuCard(
-        "img/tabs/vegy.jpg",
-        "vegy",
-        'Меню "Фитнес"',
-        'Меню "Фитнес" - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активных и здоровых людей. Это абсолютно новый продукт с оптимальной ценой и высоким качеством!',
-        9,
-        '.menu .container',
-        'menu__item'
-    ).render();
+    const getResource = async (url) => {
+        const res = await fetch(url);
 
-    new MenuCard(
-        "img/tabs/elite.jpg",
-        "elite",
-        'Меню “Премиум”',
-        'В меню “Премиум” мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!',
-        14,
-        '.menu .container',
-        'menu__item'
-    ).render();
+        if(!res.ok) {
+            throw new Error(`Could not fetch ${url}, status: ${res.status}`);
+        }
 
-    new MenuCard(
-        "img/tabs/post.jpg",
-        "post",
-        'Меню "Постное"',
-        'Меню “Постное” - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.',
-        21,
-        '.menu .container',
-        'menu__item'
-    ).render();
+        return await res.json();
+    };
+
+    // getResource("http://localhost:3000/menu")
+    // .then(data => {
+    //     data.forEach(({img, altimg, title, descr, price}) => {    //диструкторизация объекта из базы данных
+    //         new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
+    //     });
+    // });
+
+    getResource("http://localhost:3000/menu")
+        .then(data => createCard(data));
+        
+    function createCard (data) {
+        data.forEach (({img, altimg, title, descr, price}) =>{
+            const element = document.createElement('div');
+            element.classList.add('menu__item');
+
+            element.innerHTML = `
+                <img src=${img} alt=${altimg}>
+                    <h3 class="menu__item-subtitle">${title}</h3>
+                    <div class="menu__item-descr">${descr}</div>
+                    <div class="menu__item-divider"></div>
+                    <div class="menu__item-price">
+                        <div class="menu__item-cost">Цена:</div>
+                        <div class="menu__item-total"><span>${price}</span> грн/день</div>
+                </div>
+            `;
+            document.querySelector('.menu .container').append(element);
+        });
 
     //****************forms******************** */
 
@@ -234,10 +238,22 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     forms.forEach(item => {
-        postForm(item);
+        bindPostData(item);
     });
+
+    const postData = async (url, data) => {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: data
+        });
+
+        return await res.json();
+    };
     
-    function postForm(form) {
+    function bindPostData(form) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -247,31 +263,30 @@ window.addEventListener('DOMContentLoaded', () => {
                 display: block;
                 margin: 20px auto 0 auto;
             `; //лучше добавлять класс.
-            form.insertAdjacentElement('afterend', statusMessage); //добавление на страницу 
-
-            // const request = new XMLHttpRequest();
-            // request.open('POST', 'server.php');
+            form.insertAdjacentElement('afterend', statusMessage);  
 
             const formData = new FormData(form);
+            // менее элигатный способ получения из formData json файла
 
-            const object = {};
-            formData.forEach(function (value, key) {
-                object[key] = value;
-            });
-            
-            fetch('server.php', {
-                method: 'POST',
-                body: JSON.stringify(object),
-                headers:{'Content-type': 'application/json'}
-            })
-            .then(data => data.text())
+            // const object = {};
+            // formData.forEach(function(value, key) {
+            //     object[key] = value;
+            // });
+
+            //postData("http://localhost:3000/requests", JSON.stringify(object))
+
+
+            // Более краткий сбособ получения из formData json
+
+            const json = JSON.stringify(Object.fromEntries(formData.entries()));
+
+            postData("http://localhost:3000/requests", json)
             .then(data => {
                 console.log(data);
                 showThanksModal(message.success);
                 statusMessage.remove();
-            }).catch((data) => {
-                console.log(data);
-                showThanksModal(message.failure);
+            }).catch(() => {
+                showThanksModal(message.failure);   
             }).finally(() => {
                 form.reset();
             });
@@ -304,6 +319,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     
     }
+    
+    fetch('http://localhost:3000/menu')
+    .then(data => data.json())
+    .then(res => console.log(res));
 
 });
 
