@@ -1,4 +1,6 @@
 //'use strict';
+require('es6-promise').polyfill();
+import "core-js/stable";
 import calc from './modules/calc';
 import cards from './modules/cards';
 import forms from './modules/forms';
@@ -29,3 +31,17 @@ window.addEventListener('DOMContentLoaded', () => {
     tabs('.tabheader__item','.tabcontent', '.tabheader__items', 'tabheader__item_active');
     timer('.timer', '2023-05-11'); 
 });
+
+let c = 4;
+function addX(x) {
+  return function(n) {
+     return n + x;
+  };
+}
+ 
+const addThree = addX(3);
+ 
+let d = addThree(c);
+let res = addThree(c);
+ 
+console.log(res);
